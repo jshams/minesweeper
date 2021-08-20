@@ -35,6 +35,14 @@ class Tile:
 
     def __hash__(self):
         return hash((self.i, self.j))
+    
+    def __eq__(self, other_tile):
+        '''
+        Equals method to compare the location of 2 tiles. Should only be
+        used by test_board - consider using another method of checking tile
+        equality
+        '''
+        return self.i == other_tile.i and self.j == other_tile.j
 
     def make_bomb(self):
         self._is_bomb = True
