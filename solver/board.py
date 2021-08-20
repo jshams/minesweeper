@@ -1,4 +1,5 @@
 from random import randint
+from tile import Tile
 
 
 class Board:
@@ -6,51 +7,55 @@ class Board:
         self.width = width
         self.height = height
         self.num_bombs = num_bombs
-        self.board = None
-        self.bomb_rep = 9
+        self.board = [
+            [Tile(i, j) for j in range(self.width)]
+            for i in range(self.height)
+        ]
+
+    def __repr__(self):
+        return f'Board(w = {self.width}, h={self.height}, n={self.num_bombs})'
+
+    def __str__(self):
+        return '\n'.join(''.join(map(str, row_tiles)) for row_tiles in self.board)
+
+    def __iter__(self):
+        for i in range(self.height):
+            for j in range(self.width):
+                yield self.board[i][j]
 
     # board setup methods
-
-    def _create_board(self, i, j):
-        self.board = [[0] * self.width for _ in range(self.height)]
-
-        click_radius = set(self.tile_neighbors(i, j))
-        click_radius.add((i, j))
+    def _create_board(self, clicked_tile):
+        '''
+        Create a board by adding bombs randomly.
+        It's important to note that bombs cannot appear on, or adjacent to the
+        first selected tile.
+        '''
+        blank_tiles = set(self.tile_neighbors(clicked_tile))
+        blank_tiles.add(clicked_tile)
         # add the bombs
         bombs_added = 0
         while bombs_added < self.num_bombs:
             # chose a random location to plave a bomb
-            ri, rj = randint(0, self.height - 1), randint(0, self.width - 1)
+            i, j = randint(0, self.height - 1), randint(0, self.width - 1)
+            random_tile = self.board[i][j]
             # dont repeat bombs and dont place bomb on the orignal (i, j)
-            if not self.is_bomb(ri, rj) and (ri, rj) not in click_radius:
-                self.board[ri][rj] = self.bomb_rep
+            if not random_tile.is_bomb() and random_tile not in blank_tiles:
+                random_tile.make_bomb()
+                self.increment_neighbors(random_tile)
                 bombs_added += 1
-                # add 1 to neighbors
-                self.increment_neighbors(ri, rj)
 
-    def increment_neighbors(self, i, j):
-        for i, j in self.tile_neighbors(i, j):
-            if not self.is_bomb(i, j):
-                self.board[i][j] += 1
+    def make_tile_bomb(self, tile):
+        tile.make_bomb()
 
-    def move(self, i, j):
-        if self.board is None:
-            self._create_board(i, j)
+    def increment_neighbors(self, tile):
+        for tile in self.tile_neighbors(tile):
+            tile.num_adjacent_bombs += 1
 
-    # tile methods
     def _is_inbounds(self, i, j):
         return 0 <= i < self.height and 0 <= j < self.width
 
-    def is_bomb(self, i, j):
-        return self.board[i][j] == self.bomb_rep
-
-    def is_blank(self, i, j):
-        return self.board[i][j] == 0
-
-    def tile_val(self, i, j):
-        return self.board[i][j]
-
-    def tile_neighbors(self, i, j):
+    def tile_neighbors(self, tile):
+        i, j = tile.i, tile.j
         neighbor_indices = (
             (i - 1, j),  # up
             (i + 1, j),  # down
@@ -61,7 +66,14 @@ class Board:
             (i + 1, j - 1),  # bottom left
             (i + 1, j + 1)   # bottom right
         )
-
         for i, j in neighbor_indices:
             if self._is_inbounds(i, j):
-                yield i, j
+                yield self.board[i][j]
+
+
+if __name__ == '__main__':
+    board = Board(10, 10, 10)
+    selected_tile = Tile(randint(0, 9), randint(0, 9))
+    print(f'Selected tile: {(selected_tile.i, selected_tile.j)}')
+    board._create_board(selected_tile)
+    print(board)
